@@ -1,0 +1,33 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String           @id @default(uuid())
+  name         String           @unique
+  chips        Int              @default(3000000)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  gameId       String?
+  isWaiting    Boolean?         @default(false)
+  position     Int?             @default(0)  // Player position at the table
+}
+
+model Game {
+  id             String           @id @default(uuid())
+  name           String
+  maxPlayers     Int              @default(6)
+  isActive       Boolean          @default(true)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  gameHistory    Json[]
+  creatorId      String?          // ID of the user who created the game
+}
