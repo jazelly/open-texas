@@ -4,8 +4,8 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 import path from 'path';
 import dotenv from 'dotenv';
-import { gameSocket } from './socket';
-import { apiRoutes } from './routes';
+import { gameSocket } from './socket.js';
+import { apiRoutes } from './routes/index.js';
 
 // Load environment variables
 dotenv.config();
@@ -18,7 +18,7 @@ const io = new Server(server, {
   cors: {
     origin: process.env.NODE_ENV === 'production' 
       ? false 
-      : ['http://localhost:3000', 'http://127.0.0.1:3000'],
+      : process.env.CLIENT_URL,
     methods: ['GET', 'POST'],
     credentials: true
   }
@@ -28,7 +28,7 @@ const io = new Server(server, {
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
     ? true 
-    : ['http://localhost:3000', 'http://127.0.0.1:3000'],
+    : process.env.CLIENT_URL,
   credentials: true
 }));
 app.use(express.json());
@@ -53,7 +53,7 @@ gameSocket(io);
 const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-  console.log(`Socket.io is accepting connections from: ${process.env.NODE_ENV === 'production' ? 'same-origin only' : 'http://localhost:3000'}`);
+  console.log(`Socket.io is accepting connections from: ${process.env.NODE_ENV === 'production' ? 'same-origin only' : process.env.CLIENT_URL}`);
 });
 
 // Handle graceful shutdown

@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useActiveGames, useCreateGame } from '../hooks/useGames';
 import { useAuth } from '../hooks/useAuth';
+import { gameApi } from '../services/api';
 
 function LobbyPage() {
   const navigate = useNavigate();
   const [newGameName, setNewGameName] = useState('');
   const [maxPlayers, setMaxPlayers] = useState(6);
+  const [isJoiningGame, setIsJoiningGame] = useState<string | null>(null);
   
   // Use auth hook
   const { user, isAuthenticated, isLoading, error, clearError } = useAuth();
@@ -16,11 +18,11 @@ function LobbyPage() {
   const createGameMutation = useCreateGame();
 
   // Redirect to home if not authenticated
-  // useEffect(() => {
-  //   if (!isLoading && !isAuthenticated) {
-  //     navigate('/');
-  //   }
-  // }, [isAuthenticated, isLoading, navigate]);
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      navigate('/');
+    }
+  }, [isAuthenticated, isLoading, navigate]);
 
   // Clear any auth errors when unmounting
   useEffect(() => {
@@ -70,12 +72,7 @@ function LobbyPage() {
         creatorId: user.id
       }, {
         onSuccess: (data) => {
-          navigate(`/game/${data.id}`, { 
-            state: { 
-              playerName: user.name,
-              isCreator: true
-            } 
-          });
+          navigate(`/game/${data.id}`);
         },
         onError: (error) => {
           console.error('Failed to create game:', error);
@@ -84,8 +81,18 @@ function LobbyPage() {
     }
   };
 
-  const handleJoinGame = (gameId: string) => {
-    navigate(`/game/${gameId}`, { state: { playerName: user.name } });
+  const handleJoinGame = async (gameId: string) => {
+    try {
+      setIsJoiningGame(gameId);
+      const response = await gameApi.getJoinableGameById(gameId);
+      if (response.data) {
+        navigate(`/game/${gameId}`);
+      }
+    } catch (error) {
+      alert('This game no longer exists or is not available.');
+    } finally {
+      setIsJoiningGame(null);
+    }
   };
 
   return (
@@ -122,14 +129,20 @@ function LobbyPage() {
               </div>
               <button 
                 onClick={() => handleJoinGame(game.id)}
-                disabled={game.players.length >= game.maxPlayers}
+                disabled={game.players.length >= game.maxPlayers || isJoiningGame === game.id}
                 className={`px-4 py-2 rounded-md transition-colors ${
                   game.players.length >= game.maxPlayers 
                     ? 'bg-gray-600 text-gray-400 cursor-not-allowed' 
+                    : isJoiningGame === game.id
+                    ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
                     : 'bg-green-600 text-white cursor-pointer hover:bg-green-700'
                 }`}
               >
-                {game.players.length >= game.maxPlayers ? 'Full' : 'Join'}
+                {game.players.length >= game.maxPlayers 
+                  ? 'Full' 
+                  : isJoiningGame === game.id
+                  ? 'Joining...'
+                  : 'Join'}
               </button>
             </div>
           ))

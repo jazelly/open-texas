@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
-import { userService } from '../services/UserService';
-import { generateToken } from '../utils/jwt';
-import { formatChips, parseChips } from '../utils/chip';
+import { userService } from '../services/UserService.js';
+import { generateToken } from '../utils/jwt.js';
+import { formatChips, parseChips } from '../utils/chip.js';
 
 /**
  * Get all users

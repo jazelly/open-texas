@@ -12,15 +12,27 @@ const EmptySeat: React.FC<EmptySeatProps> = ({ seatNumber, onSit }) => {
     }
   };
 
+  const isClickable = !!onSit;
+
   return (
     <div className="text-center">
-      <div 
-        className="bg-black/40 rounded-md p-3 text-gray-400 text-sm cursor-pointer hover:bg-black/60 transition-colors"
-        onClick={handleClick}
+      <div
+        className={`bg-black/40 rounded-md p-3 text-gray-400 text-sm transition-colors ${
+          isClickable ? "cursor-pointer hover:bg-black/60" : "cursor-default opacity-70"
+        }`}
+        onClick={isClickable ? handleClick : undefined}
       >
         <div className="mb-1">Empty Seat {seatNumber}</div>
-        <div className="w-[120px] h-[50px] flex justify-center items-center border border-gray-600 rounded hover:border-white">
-          <span className="text-xs">Click to sit</span>
+        <div
+          className={`w-[120px] h-[50px] flex justify-center items-center border rounded ${
+            isClickable ? "border-gray-600 hover:border-white" : "border-gray-700"
+          }`}
+        >
+          {isClickable ? (
+            <span className="text-xs">Click to sit</span>
+          ) : (
+            <span className="text-xs text-gray-500">Waiting for players</span>
+          )}
         </div>
       </div>
     </div>

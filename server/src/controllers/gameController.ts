@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { gameService } from '../services/GameService';
+import { gameService } from '../services/GameService.js';
 
 /**
  * Get all games
@@ -13,6 +13,21 @@ export const getAllGames = async (req: Request, res: Response): Promise<void> =>
     res.status(500).json({ error: 'Failed to fetch games' });
   }
 };
+
+/**
+ * Get a joinable game by ID
+ */
+export const getJoinableGameById = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const game = await gameService.getJoinableGameById(id);
+    res.json(game);
+  } catch (error) {
+    console.error('Error fetching joinable game:', error);
+    res.status(500).json({ error: 'Failed to fetch joinable game' });
+  }
+};
+
 
 /**
  * Get active games
@@ -146,12 +161,12 @@ export const addPlayerToGame = async (req: Request, res: Response): Promise<void
     }
     
     // Move user from waiting room to active players
-    const updatedGame = await gameService.movePlayerToGame(gameId, userId, position);
-    
-    res.json(updatedGame);
+    await gameService.movePlayerToGame(gameId, userId, position);
+
+    res.status(204).send();
   } catch (error) {
-    console.error('Error adding player to game:', error);
-    res.status(500).json({ error: 'Failed to add player to game' });
+    console.error("Error adding player to game:", error);
+    res.status(500).json({ error: "Failed to add player to game" });
   }
 };
 

@@ -1,11 +1,15 @@
-import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
+import { useState, useEffect, createContext, useContext, ReactNode, useRef } from 'react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
 interface User {
   id: string;
   name: string;
-  chips: number;
+  chips: {
+    short: string;
+    raw: string;
+    full: string;
+  };
 }
 
 export interface AuthError {
@@ -18,6 +22,7 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isValidated: boolean;
   error: AuthError | null;
   login: (name: string) => Promise<void>;
   logout: () => void;
@@ -30,9 +35,12 @@ export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const isValidated = useRef(false);
   const [error, setError] = useState<AuthError | null>(null);
 
+  // Reset validation state on route change
   useEffect(() => {
+    console.log('check auth');
     checkAuth();
   }, []);
 
@@ -77,11 +85,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     if (!token) {
       setIsLoading(false);
+      isValidated.current = true;
+      setUser(null);
       return false;
     }
 
+    setIsLoading(true);
     try {
-      // Make a request to verify the token
       const response = await fetch(`${API_URL}/users/me`, {
         method: 'GET',
         headers: { 
@@ -97,7 +107,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const userData = await response.json();
       setUser(userData);
       setIsLoading(false);
-      clearError(); // Clear any previous errors
+      isValidated.current = true;
+      clearError();
       return true;
     } catch (error) {
       console.error('Authentication error:', error);
@@ -114,6 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       
       setIsLoading(false);
+      isValidated.current = true;
       return false;
     }
   };
@@ -128,6 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     setIsLoading(true);
+    isValidated.current = false;
     clearError();
     
     try {
@@ -148,6 +161,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       localStorage.setItem('auth_token', token);
       setUser(user);
+      isValidated.current = true;
     } catch (error) {
       console.error('Login error:', error);
       
@@ -169,15 +183,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     localStorage.removeItem('auth_token');
     setUser(null);
+    isValidated.current = false;
     clearError();
   };
 
   return (
     <AuthContext.Provider 
       value={{ 
-        user, 
+        user,
         isAuthenticated: !!user, 
-        isLoading, 
+        isLoading,
+        isValidated: isValidated.current,
         error,
         login, 
         logout,

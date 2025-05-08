@@ -1,5 +1,5 @@
-import { Seat } from "./Seat";
-import { GamePhase, TexasHoldemGame } from "./TexasHoldemGame";
+import { Seat } from "./Seat.js";
+import { TexasHoldemGame } from "./TexasHoldemGame.js";
 
 export class WaitingListUnit {
   public seat: Seat;

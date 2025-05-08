@@ -1,16 +1,16 @@
-import { Player } from "./Player";
-import { Deck } from "../utils/Deck";
-import { HandEvaluator } from "../utils/HandEvaluator";
+import { Player } from "./Player.js";
+import { Deck } from "../utils/Deck.js";
+import { HandEvaluator } from "../utils/HandEvaluator.js";
 import {
   BIG_BLIND_STATE,
   EMPTY_STATE,
   Seat,
   SMALL_BLIND_STATE,
   TO_REMOVE_STATE,
-} from "./Seat";
-import { Round } from "./Round";
+} from "./Seat.js";
+import { Round } from "./Round.js";
 import { Socket } from "socket.io";
-
+import { calculateSeatPosition } from "../utils/shared.js";
 // Game phases
 export type GamePhase = 1 | 2 | 4 | 8 | 16 | 32;
 
@@ -41,6 +41,7 @@ export class TexasHoldemGame {
   public id: string;
   public name: string;
   public maxPlayers: number;
+  public waitingPlayers: Map<string, Player>;
   public communityCards: Card[];
   public deck: Deck;
   public pot: number;
@@ -61,7 +62,6 @@ export class TexasHoldemGame {
   constructor(
     id: string,
     name: string,
-    seatCoordinates: SeatCoordinates[],
     maxPlayers: number = 6,
     minimumBet: number = 10
   ) {
@@ -78,9 +78,15 @@ export class TexasHoldemGame {
     this.smallBlindIndex = -1;
     this.bigBlindIndex = -1;
     this.winners = [];
+    this.waitingPlayers = new Map();
     this.minimumBet = minimumBet;
     this.currentRound = null;
     this.socketMap = new Map();
+
+    const seatCoordinates = [];
+    for (let i = 0; i < maxPlayers; i++) {
+      seatCoordinates.push(calculateSeatPosition(i, maxPlayers));
+    }
 
     const seats = seatCoordinates.map(
       ({ top, left }, index) =>
@@ -122,6 +128,40 @@ export class TexasHoldemGame {
       throw new Error("No seat available");
     }
     seat.player = new Player(id, name, chips);
+  }
+
+  addPlayerToWaitingList(id: string, name: string, chips: number): void {
+    this.waitingPlayers.set(id, new Player(id, name, chips));
+  }
+
+  movePlayerFromWaitingListToSeat(id: string, seatIndex: number): void {
+    const player = this.waitingPlayers.get(id);
+    if (!player) {
+      throw new Error("Player not found in waiting list");
+    }
+    this.waitingPlayers.delete(id);
+    if (this.isFull()) {
+      throw new Error("Game is full");
+    }
+    if (seatIndex !== undefined) {
+      if (seatIndex < 0 || seatIndex >= this.seats.length) {
+        throw new Error("Invalid seat index");
+      }
+      if (this.seats[seatIndex].player !== undefined) {
+        throw new Error("Seat already occupied");
+      }
+      this.seats[seatIndex].player = player;
+      return;
+    }
+    const seat = this.seats.find((s) => s.player === undefined);
+    if (!seat) {
+      throw new Error("No seat available");
+    }
+    seat.player = player;
+  }
+
+  getPlayingPlayers(): Player[] {
+    return this.seats.filter((s) => s.player !== undefined).map((s) => s.player!);
   }
 
   // Add a player at a specific position
@@ -470,7 +510,7 @@ export class TexasHoldemGame {
       phase,
       winners: this.winners,
       maxPlayers: this.maxPlayers,
-      // waitingPlayers will be added by the socket handler
+      waitingPlayers: Array.from(this.waitingPlayers.values()),
     };
   }
 }

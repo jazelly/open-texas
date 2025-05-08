@@ -1,6 +1,6 @@
 import express from 'express';
-import { userRouter } from './userRouter';
-import { gameRouter } from './gameRouter';
+import { userRouter } from './userRouter.js';
+import { gameRouter } from './gameRouter.js';
 
 const router = express.Router();
 

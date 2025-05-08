@@ -31,3 +31,13 @@ model Game {
   gameHistory    Json[]
   creatorId      String?          // ID of the user who created the game
 }
+
+model UserGameSession {
+  id String @id @default(uuid())
+  userId String
+  gameId String
+  socketId String?
+  token String @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

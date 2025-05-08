@@ -1,5 +1,5 @@
 import express from 'express';
-import * as gameController from '../controllers/gameController';
+import * as gameController from '../controllers/gameController.js';
 
 const router = express.Router();
 
@@ -11,7 +11,7 @@ router.post('/', gameController.createGame);
 router.put('/:id/status', gameController.updateGameStatus);
 router.put('/:id/history', gameController.updateGameHistory);
 router.delete('/:id', gameController.deleteGame);
-
+router.get('/joinable/:id', gameController.getJoinableGameById);
 // Game-player relationship routes
 router.post('/waiting-room', gameController.addPlayerToWaitingRoom);
 router.post('/add-player', gameController.addPlayerToGame);

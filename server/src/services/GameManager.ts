@@ -1,4 +1,5 @@
-import { TexasHoldemGame } from '../models/TexasHoldemGame';
+import { Player } from '../models/Player.js';
+import { TexasHoldemGame } from '../models/TexasHoldemGame.js';
 
 export class GameManager {
   private games: Map<string, TexasHoldemGame>;
@@ -31,6 +32,24 @@ export class GameManager {
   // Get a game by ID
   getGame(gameId: string): TexasHoldemGame | undefined {
     return this.games.get(gameId);
+  }
+
+  getWaitingPlayers(gameId: string): Map<string, Player> {
+    const game = this.games.get(gameId);
+    if (!game) return new Map();
+    return game.waitingPlayers;
+  }
+
+  removePlayerFromWaitingRoom(gameId: string, playerName: string): void {
+    const game = this.games.get(gameId);
+    if (!game) return;
+    game.waitingPlayers.delete(playerName);
+  }
+
+  removePlayersFromWaitingRoom(gameId: string): void {
+    const game = this.games.get(gameId);
+    if (!game) return;
+    game.waitingPlayers.clear();
   }
 
   // Get all active games
@@ -77,3 +96,5 @@ export class GameManager {
       .filter(game => game !== undefined) as TexasHoldemGame[];
   }
 } 
+
+export const gameManager = new GameManager();
