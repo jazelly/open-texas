@@ -1,5 +1,6 @@
-import { Player } from "./Player";
+import { Player, PlayerState } from "./Player.js";
 
+export type SeatPhase = 0 | 1 | 2 | 3 | 4 | 5;
 export const EMPTY_STATE = 0;
 export const PLAYER_STATE = 1;
 export const DEALER_STATE = 2;
@@ -7,10 +8,16 @@ export const SMALL_BLIND_STATE = 3;
 export const BIG_BLIND_STATE = 4;
 export const TO_REMOVE_STATE = 5;
 
+export type SeatState = {
+  state: SeatPhase;
+  player: PlayerState | undefined;
+  positionIndex: number;
+  topOffset: number;
+  leftOffset: number;
+}
+
 export class Seat {
-  public next!: Seat;
-  public prev!: Seat;
-  public state: 0 | 1 | 2 | 3 | 4 | 5;
+  public state: SeatPhase;
   public positionIndex: number;
   public player: Player | undefined;
   public topOffset: number;

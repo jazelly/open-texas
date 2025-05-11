@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { verifyToken } from '../utils/jwt';
+import { verifyToken, JWT_SECRET } from '../utils/jwt.js';
 
 // Extend Express Request to include user
 declare global {
@@ -24,7 +24,7 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
     return res.status(401).json({ error: 'No token provided' });
   }
   
-  const decoded = verifyToken(token);
+  const decoded = verifyToken(token, JWT_SECRET);
   
   if (!decoded) {;
     return res.status(401).json({ error: 'Invalid or expired token' });

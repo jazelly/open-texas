@@ -4,7 +4,7 @@ import { useAuth } from './hooks/useAuth';
 
 // Pages
 import HomePage from './pages/HomePage';
-import GamePage from './pages/GamePage';
+import GamePage from './pages/game';
 import LobbyPage from './pages/LobbyPage';
 import RulesPage from './pages/RulesPage';
 

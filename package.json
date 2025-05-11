@@ -11,7 +11,8 @@
     "dev:client": "cd client && npm run dev",
     "dev:server": "cd server && npm run dev",
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
-    "install:all": "npm install && cd client && npm install && cd ../server && npm install"
+    "install:all": "npm install && cd client && npm install && cd ../server && npm install",
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,css,scss,md}\""
   },
   "keywords": [
     "texas-holdem",
@@ -27,6 +28,7 @@
     "autoprefixer": "^10.4.21",
     "concurrently": "^8.2.2",
     "postcss": "^8.5.3",
+    "prettier": "^3.2.5",
     "tailwindcss": "^4.1.5"
   }
 }

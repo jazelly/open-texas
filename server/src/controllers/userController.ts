@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
-import { userService } from '../services/UserService';
-import { generateToken } from '../utils/jwt';
-import { formatChips, parseChips } from '../utils/chip';
+import { userService } from '../services/UserService.js';
+import { generateAuthToken, JWT_SECRET } from '../utils/jwt.js';
 
 /**
  * Get all users
@@ -65,52 +64,6 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
-/**
- * Update a user's chip count
- */
-export const updateUserChips = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { id } = req.params;
-    const { chips } = req.body;
-    
-    // Handle different chip input formats
-    let chipValue: number;
-    
-    if (typeof chips === 'string') {
-      // Handle string input (e.g. "3M" or "3000000")
-      chipValue = parseChips(chips);
-    } else if (typeof chips === 'number') {
-      // Handle number input
-      chipValue = chips;
-    } else if (typeof chips === 'object' && chips !== null) {
-      // Handle object format like { short: "3M", full: "3,000,000" }
-      // Use the full value if available, otherwise try short
-      if (chips.full) {
-        // Remove commas from the full representation
-        const fullWithoutCommas = chips.full.replace(/,/g, '');
-        chipValue = parseChips(fullWithoutCommas);
-      } else if (chips.short) {
-        chipValue = parseChips(chips.short);
-      } else if (chips.raw) {
-        chipValue = Number(chips.raw);
-      } else {
-        throw new Error('Invalid chip format: missing valid property');
-      }
-    } else {
-      throw new Error('Invalid chip format');
-    }
-    
-    const user = await userService.updateUserChips(id, chipValue);
-    
-    res.json({
-      ...user,
-      chips: formatChips(user.chips)
-    });
-  } catch (error) {
-    console.error('Error updating user chips:', error);
-    res.status(500).json({ error: 'Failed to update user chips' });
-  }
-};
 
 /**
  * Delete a user
@@ -140,20 +93,12 @@ export const authenticateUser = async (req: Request, res: Response): Promise<voi
       return;
     }
     
-    // Find or create the user
     const user = await userService.findOrCreateUser(name);
+    const token = generateAuthToken(user.id, user.name, JWT_SECRET);
     
-    // Generate JWT token
-    const token = generateToken(user.id, user.name);
-    
-    console.log('User authenticated:', user);
     res.json({ 
       token,
-      user: {
-        id: user.id,
-        name: user.name,
-        chips: formatChips(user.chips)
-      }
+      user, 
     });
   } catch (error) {
     console.error('Error authenticating user:', error);
@@ -178,11 +123,7 @@ export const getCurrentUser = async (req: Request, res: Response): Promise<void>
       return;
     }
     
-    res.json({
-      id: user.id,
-      name: user.name,
-      chips: formatChips(user.chips)
-    });
+    res.json(user);
   } catch (error) {
     console.error('Error fetching current user:', error);
     res.status(500).json({ error: 'Failed to fetch user' });

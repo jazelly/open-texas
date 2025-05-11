@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
+import { useState, useEffect, createContext, useContext, ReactNode, useRef } from 'react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
@@ -18,6 +18,7 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isValidated: boolean;
   error: AuthError | null;
   login: (name: string) => Promise<void>;
   logout: () => void;
@@ -30,9 +31,12 @@ export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const isValidated = useRef(false);
   const [error, setError] = useState<AuthError | null>(null);
 
+  // Reset validation state on route change
   useEffect(() => {
+    console.log('check auth');
     checkAuth();
   }, []);
 
@@ -75,13 +79,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const checkAuth = async (): Promise<boolean> => {
     const token = localStorage.getItem('auth_token');
     
+    isValidated.current = true;
     if (!token) {
       setIsLoading(false);
+      setUser(null);
       return false;
     }
 
+    setIsLoading(true);
     try {
-      // Make a request to verify the token
       const response = await fetch(`${API_URL}/users/me`, {
         method: 'GET',
         headers: { 
@@ -95,12 +101,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       
       const userData = await response.json();
+      console.log('userData', userData);
       setUser(userData);
-      setIsLoading(false);
-      clearError(); // Clear any previous errors
+      if (error) {
+        clearError();
+      }
       return true;
     } catch (error) {
-      console.error('Authentication error:', error);
       localStorage.removeItem('auth_token');
       setUser(null);
       
@@ -112,9 +119,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           code: 'network_error'
         });
       }
-      
-      setIsLoading(false);
       return false;
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -128,6 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     setIsLoading(true);
+    isValidated.current = false;
     clearError();
     
     try {
@@ -148,6 +156,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       localStorage.setItem('auth_token', token);
       setUser(user);
+      isValidated.current = true;
     } catch (error) {
       console.error('Login error:', error);
       
@@ -169,15 +178,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     localStorage.removeItem('auth_token');
     setUser(null);
+    isValidated.current = false;
     clearError();
   };
 
   return (
     <AuthContext.Provider 
       value={{ 
-        user, 
+        user,
         isAuthenticated: !!user, 
-        isLoading, 
+        isLoading,
+        isValidated: isValidated.current,
         error,
         login, 
         logout,

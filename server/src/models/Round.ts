@@ -1,70 +1,31 @@
-import { Seat } from "./Seat";
-import { GamePhase, TexasHoldemGame } from "./TexasHoldemGame";
+import { Seat } from "./Seat.js";
+import { TexasHoldemGame } from "./TexasHoldemGame.js";
 
-export class WaitingListUnit {
-  public seat: Seat;
-  public next: WaitingListUnit | null;
+export type Action = 'bet' | 'check' | 'call' | 'raise' | 'fold';
 
-  constructor(seat: Seat) {
-    this.seat = seat;
-    this.next = null;
-  }
+export interface RoundState {
+  currentBet: number;
+  passedPlayersAmount: number;
+  passPlayerAmountCap: number;
+  currentActingPlayerSeat: ReturnType<Seat['getState']>;
+  startingSeat: ReturnType<Seat['getState']>;
+  availableActions: Action[];
 }
 
 export class Round {
-  public currentActingPlayerSeat: Seat;
-  public minimumCall: number;
-  public currentBet: number;
-  // A single linked list of player seats that have not acted yet
-  public currentActingPlayerUnit: WaitingListUnit;
+  public currentActingPlayerSeat!: Seat;
+  public passedPlayersAmount!: number;
+  public passPlayerAmountCap!: number;
+  public startingSeat!: Seat;
+  public currentBet!: number;
+  public availableActions!: Set<Action>;
   public game: TexasHoldemGame;
 
 
-  // return the head of the waiting list
-  estabilishWaitingList(currentActingPlayerSeat: Seat): WaitingListUnit {
-    // establish WaitingList for this round, as every one must act
-    let curUnit = new WaitingListUnit(currentActingPlayerSeat);
-    const head = curUnit;
-    let cur = currentActingPlayerSeat;
-    const visitedSeats = new Set<Seat>();
-    cur = cur.next;
-    while (cur) {
-      if (visitedSeats.has(cur)) break;
-      if (!cur.player) continue;
-
-      visitedSeats.add(cur);
-      const nextUnit = new WaitingListUnit(cur);
-      curUnit.next = nextUnit;
-      curUnit = nextUnit;
-      cur = cur.next;
-    }
-    return head;
-  }
-
-  clearPlayersRoundBet() {
-    for (const seat of this.game.seats) {
-      if (seat.player && !seat.player.isFolded) {
-        seat.player.currentRoundBet = 0;
-      }
-    }
-  }
-
-  constructor(game: TexasHoldemGame, currentActingPlayerSeat: Seat) {
+  constructor(game: TexasHoldemGame, startingSeat: Seat, startingBet: number, passedPlayersAmount: number = 0) {
     this.game = game;
-    this.currentActingPlayerSeat = currentActingPlayerSeat;
-    this.minimumCall = 0;
-    this.currentBet = 0;
-    this.currentActingPlayerUnit = this.estabilishWaitingList(currentActingPlayerSeat);
-    this.clearPlayersRoundBet();
+    this.startNewRound(startingSeat, startingBet, passedPlayersAmount);
   }
-
-  foldCurrentUnactionedPlayer(playerSeat: Seat) {
-    // remove playerSeat from the waiting list
-    const cur = this.currentActingPlayerUnit;
-    cur.seat.player!.fold();
-    cur.next = null;
-  }
-
 
   /**
    * Called by client side to handle player action
@@ -72,41 +33,32 @@ export class Round {
    * @param action 
    * @param amount 
    */
-  handlePlayerAction(playerSeat: Seat, action: string, amount?: number) {
-    const player = playerSeat.player!;
+  handlePlayerAction(action: Action, amount?: number): Seat | null {
+    const playerSeat = this.currentActingPlayerSeat;
+    const player = playerSeat.player;
+    if (!player) throw new Error('Player not found');
 
     if (player.isFolded) {
       throw new Error('Player is folded');
     }
 
     const bettableAmount = player.chips - player.currentGameBet;
+    if (!this.availableActions.has(action)) throw new Error(`Cannot perform action ${action}`);
     switch (action) {
+      case 'call':
+        const callAmount = bettableAmount < this.currentBet ? bettableAmount : this.currentBet;
+        player.bet(callAmount);
+        this.game.pot += callAmount;
+        break;
       case 'bet':
         if (!amount || amount < this.game.minimumBet) {
           throw new Error(`Bet must be at least ${this.game.minimumBet}`);
         }
         player.bet(amount);
         this.game.pot += amount;
-        this.currentBet = amount;
-        break;
-      case 'check':
-        if (player.currentRoundBet < this.minimumCall) {
-          throw new Error('Cannot check when there are bets');
-        }
-        // No action needed, just pass to the next player
-        break;
-      case 'call':
-        if (player.currentRoundBet >= this.currentBet) {
-          throw new Error('Nothing to call');
-        }
-        const callAmount = bettableAmount < this.currentBet ? bettableAmount : this.currentBet;
-        player.bet(callAmount);
-        this.game.pot += callAmount;
+        this.startNewRound(this.currentActingPlayerSeat, amount);
         break;
       case 'raise':
-        if (this.currentBet === 0) {
-          throw new Error('Cannot raise, must bet');
-        }
         if (!amount || amount <= this.currentBet) {
           throw new Error(`Raise must be greater than current bet of ${this.currentBet}`);
         }
@@ -116,23 +68,67 @@ export class Round {
         const raiseAmount = amount;
         player.bet(raiseAmount);
         this.game.pot += raiseAmount;
-        this.currentBet = amount;
+        this.startNewRound(this.currentActingPlayerSeat, amount);
         break;
       case 'fold':
-          player.fold();
-          break;
+        player.fold();
+        break;
+      case 'check':
       default:
-        throw new Error('Invalid action');
+        break;
+    }
+    // has passed all players
+    if (this.passedPlayersAmount ===  this.passPlayerAmountCap) return null;
+
+    const nextSeat = this.getNextActingPlayerSeat();
+    this.currentActingPlayerSeat = nextSeat;
+    this.passedPlayersAmount += 1;
+
+    return nextSeat;
+  }
+
+  getNextActingPlayerSeat(): Seat {
+    const seats = this.game.seats;
+    let i = this.currentActingPlayerSeat.positionIndex;
+    let nextSeat: Seat;
+    while (1) {
+      i++;
+      const index = i % seats.length;
+      if (seats[index].player && !seats[index].player.isFolded) {
+        nextSeat = seats[index];
+        break;
+      }
+    }
+    return nextSeat!;
+  }
+
+  startNewRound(startingSeat: Seat, startingBet: number, passedPlayersAmount: number = 1) {
+    this.passedPlayersAmount = passedPlayersAmount;
+    this.passPlayerAmountCap = this.game.getPlayablePlayerCount();
+    this.currentBet = startingBet;
+    this.startingSeat = startingSeat;
+    this.currentActingPlayerSeat = startingSeat;
+    this.availableActions = new Set<Action>(['fold']);
+    if (startingBet > 0) {
+      this.availableActions.add('call');
+      this.availableActions.add('raise');
+    } else {
+      this.availableActions.add('check');
+      this.availableActions.add('bet');
     }
   }
 
   getState() {
     return {
-      currentActingPlayerSeat: this.currentActingPlayerSeat.getState(),
-      minimumCall: this.minimumCall,
       currentBet: this.currentBet,
+      passedPlayersAmount: this.passedPlayersAmount,
+      passPlayerAmountCap: this.passPlayerAmountCap,
+      currentActingPlayerSeat: this.currentActingPlayerSeat.getState(),
+      startingSeat: this.startingSeat.getState(),
+      availableActions: Array.from(this.availableActions),
     };
   }
+
 
   run() {
 

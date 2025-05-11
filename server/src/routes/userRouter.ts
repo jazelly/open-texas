@@ -1,6 +1,6 @@
 import express from 'express';
-import * as userController from '../controllers/userController';
-import { authenticateToken } from '../middleware/authMiddleware';
+import * as userController from '../controllers/userController.js';
+import { authenticateToken } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
@@ -11,7 +11,6 @@ router.post('/', userController.createUser);
 router.post('/auth', userController.authenticateUser);
 // Protected route for current user
 router.get('/me', authenticateToken, userController.getCurrentUser);
-router.put('/:id/chips', userController.updateUserChips);
 router.delete('/:id', userController.deleteUser);
 
 export const userRouter = router; 

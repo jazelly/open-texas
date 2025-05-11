@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { gameService } from '../services/GameService';
+import { gameService } from '../services/GameService.js';
 
 /**
  * Get all games
@@ -13,6 +13,21 @@ export const getAllGames = async (req: Request, res: Response): Promise<void> =>
     res.status(500).json({ error: 'Failed to fetch games' });
   }
 };
+
+/**
+ * Get a joinable game by ID
+ */
+export const getJoinableGameById = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const game = await gameService.getJoinableGameById(id);
+    res.json(game);
+  } catch (error) {
+    console.error('Error fetching joinable game:', error);
+    res.status(500).json({ error: 'Failed to fetch joinable game' });
+  }
+};
+
 
 /**
  * Get active games
@@ -102,97 +117,6 @@ export const addPlayerToWaitingRoom = async (req: Request, res: Response): Promi
   }
 };
 
-/**
- * Add a player to the game (from waiting room to active player)
- */
-export const addPlayerToGame = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { gameId, userId, position } = req.body;
-    
-    if (!gameId || !userId) {
-      res.status(400).json({ error: 'Game ID and User ID are required' });
-      return;
-    }
-    
-    // Get the game
-    const game = await gameService.getGameById(gameId);
-    
-    if (!game) {
-      res.status(404).json({ error: 'Game not found' });
-      return;
-    }
-    
-    // Check if the game is full
-    if (game.players.length >= game.maxPlayers) {
-      res.status(400).json({ error: 'Game is full' });
-      return;
-    }
-    
-    // Check if the user is in the waiting room
-    const isUserWaiting = game.waitingPlayers.some((player: { id: string }) => player.id === userId);
-    
-    if (!isUserWaiting) {
-      res.status(400).json({ error: 'User is not in the waiting room' });
-      return;
-    }
-    
-    // Check if the position is already occupied if a position is specified
-    if (position !== undefined) {
-      const isPositionOccupied = game.players.some((player: { position: number }) => player.position === position);
-      if (isPositionOccupied) {
-        res.status(400).json({ error: 'Position already occupied' });
-        return;
-      }
-    }
-    
-    // Move user from waiting room to active players
-    const updatedGame = await gameService.movePlayerToGame(gameId, userId, position);
-    
-    res.json(updatedGame);
-  } catch (error) {
-    console.error('Error adding player to game:', error);
-    res.status(500).json({ error: 'Failed to add player to game' });
-  }
-};
-
-/**
- * Remove a player from the game
- */
-export const removePlayerFromGame = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { gameId, userId } = req.body;
-    
-    if (!gameId || !userId) {
-      res.status(400).json({ error: 'Game ID and User ID are required' });
-      return;
-    }
-    
-    // Check if the player is in the game
-    const game = await gameService.getGameById(gameId);
-    
-    if (!game) {
-      res.status(404).json({ error: 'Game not found' });
-      return;
-    }
-    
-    // Check if player is in active players or waiting room
-    const isActivePlayer = game.players.some((player: { id: string }) => player.id === userId);
-    const isWaitingPlayer = game.waitingPlayers.some((player: { id: string }) => player.id === userId);
-    
-    if (!isActivePlayer && !isWaitingPlayer) {
-      res.status(404).json({ error: 'Player not found in this game' });
-      return;
-    }
-    
-    // Remove the player
-    await gameService.removePlayerFromGame(gameId, userId, isActivePlayer);
-    
-    res.status(204).send();
-  } catch (error) {
-    console.error('Error removing player from game:', error);
-    res.status(500).json({ error: 'Failed to remove player from game' });
-  }
-};
 
 /**
  * Update a game's status (active/inactive)

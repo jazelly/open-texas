@@ -86,11 +86,7 @@ export function parseChips(chipString: string): number {
   }
   
   // Round to the nearest whole number
-  // if value is not integer, round to 2 decimal places
-  if (!Number.isInteger(value)) {
-    return Math.round(value * 100) / 100;
-  }
-  return value;
+  return Math.round(value);
 }
 
 /**

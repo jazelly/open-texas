@@ -25,9 +25,20 @@ model Game {
   id             String           @id @default(uuid())
   name           String
   maxPlayers     Int              @default(6)
+  minimumBet     Int              @default(10000)
   isActive       Boolean          @default(true)
+  hostId      String          // ID of the user who hosting the game
+  gameHistory    Json[]
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
-  gameHistory    Json[]
-  creatorId      String?          // ID of the user who created the game
+}
+
+model UserGameSession {
+  id String @id @default(uuid())
+  userId String
+  gameId String
+  socketId String?
+  token String @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

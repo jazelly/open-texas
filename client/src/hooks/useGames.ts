@@ -18,7 +18,7 @@ export const useActiveGames = (options = {}) => {
       const response = await gameApi.getActiveGames();
       return response.data;
     },
-    refetchInterval: 10000, // Poll every 10 seconds
+    refetchInterval: 20000, // Poll every 20 seconds
     ...options,
   });
 };
@@ -28,6 +28,18 @@ export const useGame = (id: string, options = {}) => {
     queryKey: ['games', id],
     queryFn: async () => {
       const response = await gameApi.getGameById(id);
+      return response.data;
+    },
+    enabled: !!id,
+    ...options,
+  });
+};
+
+export const useJoinableGame = (id: string, options = {}) => {
+  return useQuery({
+    queryKey: ['games', id],
+    queryFn: async () => {
+      const response = await gameApi.getJoinableGameById(id);
       return response.data;
     },
     enabled: !!id,
@@ -45,22 +57,6 @@ export const useCreateGame = () => {
     },
     onSuccess: () => {
       // Invalidate and refetch games queries
-      queryClient.invalidateQueries({ queryKey: ['games'] });
-    },
-  });
-};
-
-export const useAddPlayerToGame = () => {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async ({ gameId, userId }: { gameId: string, userId: string }) => {
-      const response = await gameApi.addPlayerToGame(gameId, userId);
-      return response.data;
-    },
-    onSuccess: (_, variables) => {
-      // Invalidate specific game and games list
-      queryClient.invalidateQueries({ queryKey: ['games', variables.gameId] });
       queryClient.invalidateQueries({ queryKey: ['games'] });
     },
   });

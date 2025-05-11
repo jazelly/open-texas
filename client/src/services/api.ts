@@ -13,10 +13,9 @@ export const gameApi = {
   getAllGames: () => api.get('/games'),
   getActiveGames: () => api.get('/games/active'),
   getGameById: (id: string) => api.get(`/games/${id}`),
+  getJoinableGameById: (id: string) => api.get(`/games/joinable/${id}`),
   createGame: (name: string, maxPlayers: number, creatorId: string) => 
     api.post('/games', { name, maxPlayers, creatorId }),
-  addPlayerToGame: (gameId: string, userId: string) => 
-    api.post('/games/add-player', { gameId, userId }),
   removePlayerFromGame: (gameId: string, userId: string) => 
     api.post('/games/remove-player', { gameId, userId }),
 };

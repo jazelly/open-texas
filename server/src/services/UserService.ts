@@ -45,15 +45,6 @@ export class UserService {
     });
   }
 
-  /**
-   * Update user's chips
-   */
-  async updateUserChips(id: string, chips: number): Promise<any> {
-    return prisma.user.update({
-      where: { id },
-      data: { chips }
-    });
-  }
 
   /**
    * Delete a user
