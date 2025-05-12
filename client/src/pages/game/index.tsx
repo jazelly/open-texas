@@ -17,12 +17,7 @@ import { formatChips } from '@/utils/chip';
 
 import {
   GameState,
-  GamePhase,
   WAITING_PHASE,
-  PRE_FLOP_PHASE,
-  FLOP_PHASE,
-  TURN_PHASE,
-  RIVER_PHASE,
   SHOWDOWN_PHASE,
   JwtGamePayload,
   GameSession,

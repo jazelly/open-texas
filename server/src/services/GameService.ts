@@ -1,8 +1,8 @@
-import { Game, PrismaClient } from "@prisma/client";
+import { Game } from "@prisma/client";
 import { gameManager } from "./GameManager.js";
 import { TexasHoldemGame } from "../models/TexasHoldemGame.js";
 import { Player } from "../models/Player.js";
-const prisma = new PrismaClient();
+import prisma from "./prisma.js";
 
 export class GameService {
   /**

@@ -1,6 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from "./prisma.js";
 
-const prisma = new PrismaClient();
 
 export class UserService {
   /**

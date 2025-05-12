@@ -1,4 +1,4 @@
-import { Card } from '../models/TexasHoldemGame';
+import { Card } from '../models/TexasHoldemGame.js';
 
 // Hand rankings
 enum HandRank {

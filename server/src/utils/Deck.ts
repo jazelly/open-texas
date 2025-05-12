@@ -1,4 +1,4 @@
-import { Card } from '../models/TexasHoldemGame';
+import { Card } from '../models/TexasHoldemGame.js';
 
 export class Deck {
   private cards: Card[];

@@ -3,12 +3,17 @@ import http from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { gameSocket } from './socket.js';
 import { apiRoutes } from './routes/index.js';
 
 // Load environment variables
 dotenv.config();
+
+// Create dirname equivalent for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const server = http.createServer(app);

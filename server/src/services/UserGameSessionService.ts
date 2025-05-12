@@ -1,8 +1,6 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from "./prisma.js";
 import jwt from 'jsonwebtoken';
 import { randomUUID } from 'crypto';
-
-const prisma = new PrismaClient();
 
 // Configure JWT for game sessions
 const GAME_JWT_SECRET = process.env.GAME_JWT_SECRET!; // Use env var in production
