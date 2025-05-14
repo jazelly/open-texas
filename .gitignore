@@ -35,3 +35,5 @@ yarn-error.log*
 
 nginx.conf
 DEPLOYMENT.md
+docker-compose.yml
+certbot/

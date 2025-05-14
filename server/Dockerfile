@@ -45,8 +45,7 @@ COPY --from=build /app/server/dist ./dist
 # Install production dependencies
 RUN npm install --omit=dev
 
-RUN npm install -g prisma
-RUN prisma generate
+RUN npx prisma generate
 
 EXPOSE 8080
 CMD ["node", "dist/server/src/index.js"]

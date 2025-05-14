@@ -26,7 +26,6 @@ FROM nginx:alpine
 
 # Copy built client files
 COPY --from=build /app/client/dist /usr/share/nginx/html
-COPY client/nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80 443
 CMD ["nginx", "-g", "daemon off;"]
