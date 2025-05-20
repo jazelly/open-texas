@@ -10,7 +10,7 @@ COPY client/vite.config.ts ./client/
 COPY client/index.html ./client/
 COPY client/tailwind.config.js ./client/
 COPY client/postcss.config.cjs ./client/
-
+COPY client/.env ./client/.env
 # Install all dependencies using workspace
 RUN npm install
 
