@@ -1,0 +1,32 @@
+<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="32" height="32" rx="4" fill="#1A5D1A" />
+  
+  <!-- Playing Cards -->
+  <g transform="translate(4, 4)">
+    <!-- Card 1 (Ace of Spades) -->
+    <rect x="0" y="0" width="12" height="16" rx="2" fill="white" stroke="#333" stroke-width="0.5" />
+    
+    <!-- Ace Symbol -->
+    <text x="2" y="7" font-family="Arial" font-weight="bold" font-size="6" fill="#000">A</text>
+    
+    <!-- Spade -->
+    <path d="M6,13 C5,10 2,11 3,8 C4,6 8,6 9,8 C10,11 7,10 6,13" fill="black" />
+    <path d="M6,13 L7,15 L5,15 Z" fill="black" />
+    
+    <!-- Card 2 (King of Hearts) -->
+    <rect x="12" y="8" width="12" height="16" rx="2" fill="white" stroke="#333" stroke-width="0.5" transform="rotate(-15, 12, 16)" />
+    
+    <!-- King Symbol -->
+    <text x="15" y="16" font-family="Arial" font-weight="bold" font-size="6" fill="#000" transform="rotate(-15, 15, 16)">K</text>
+    
+    <!-- Heart -->
+    <path d="M21,21 C19,18 15,19 15,22 C15,19 11,18 9,21 C7,24 10,26 15,29 C20,26 23,24 21,21" fill="#D10808" transform="scale(0.5) translate(23, 25)" />
+  </g>
+  
+  <!-- Poker Chip Outline -->
+  <circle cx="16" cy="16" r="15" fill="none" stroke="#FFC107" stroke-width="1.5" opacity="0.6" />
+  
+  <!-- Poker Chip Inner Ring -->
+  <circle cx="16" cy="16" r="13" fill="none" stroke="#FFC107" stroke-width="0.5" opacity="0.6" />
+</svg>
