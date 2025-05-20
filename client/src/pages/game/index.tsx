@@ -52,9 +52,6 @@ function GamePage() {
   if (currentPlayer) {
     maximumBet = currentPlayer.chips - currentPlayer.currentGameBet;
   }
-  console.log('gameState', gameState);
-
-  // Handle authentication status changes
   useEffect(() => {
     if (
       isValidated && // Only make decisions after auth is validated
@@ -72,12 +69,15 @@ function GamePage() {
     if (socketRef.current) return;
 
     setConnecting(true);
-    const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:8080';
+    // Use a relative path to let the browser connect to the same origin
+    // This will be properly handled by the nginx proxy
+    const socketPath = '/socket.io';
 
     let newSocket;
 
-    // Direct connection to the socket server (needs CORS enabled on server)
-    newSocket = io(socketUrl, {
+    // Connect through the nginx proxy
+    newSocket = io({
+      path: socketPath,
       withCredentials: true,
       transports: ['websocket', 'polling'],
       reconnectionAttempts: 5,

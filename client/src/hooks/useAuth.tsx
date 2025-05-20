@@ -1,6 +1,6 @@
 import { useState, useEffect, createContext, useContext, ReactNode, useRef } from 'react';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+import { userApi } from '../services/api';
+import axios from 'axios';
 
 interface User {
   id: string;
@@ -40,30 +40,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     checkAuth();
   }, []);
 
-  const handleApiError = async (response: Response, defaultMessage: string) => {
-    const status = response.status;
+  const handleApiError = (error: unknown, defaultMessage: string) => {
     let errorMessage = defaultMessage;
-    
-    try {
-      // Try to parse the error message from the response
-      const data = await response.json();
-      if (data && data.error) {
-        errorMessage = data.error;
-      }
-    } catch (e) {
-      // If we can't parse the JSON, just use the default message
-      console.error('Error parsing error response:', e);
-    }
-    
     let errorCode = 'unknown_error';
+    let status: number | undefined = undefined;
     
-    // Map status codes to specific error codes
-    if (status === 400) errorCode = 'bad_request';
-    else if (status === 401) errorCode = 'unauthorized';
-    else if (status === 403) errorCode = 'forbidden';
-    else if (status === 404) errorCode = 'not_found';
-    else if (status === 409) errorCode = 'conflict';
-    else if (status === 500) errorCode = 'server_error';
+    if (axios.isAxiosError(error)) {
+      status = error.response?.status;
+      
+      // Try to extract error message from response
+      if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      }
+      
+      // Map status codes to specific error codes
+      if (status === 400) errorCode = 'bad_request';
+      else if (status === 401) errorCode = 'unauthorized';
+      else if (status === 403) errorCode = 'forbidden';
+      else if (status === 404) errorCode = 'not_found';
+      else if (status === 409) errorCode = 'conflict';
+      else if (status === 500) errorCode = 'server_error';
+    }
     
     setError({
       message: errorMessage,
@@ -88,19 +85,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_URL}/users/me`, {
-        method: 'GET',
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await userApi.getCurrentUser();
+      const userData = response.data;
       
-      if (!response.ok) {
-        throw response;
-      }
-      
-      const userData = await response.json();
       console.log('userData', userData);
       setUser(userData);
       if (error) {
@@ -110,15 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       localStorage.removeItem('auth_token');
       setUser(null);
-      
-      if (error instanceof Response) {
-        await handleApiError(error, 'Failed to authenticate user');
-      } else {
-        setError({
-          message: 'Network error. Please check your connection.',
-          code: 'network_error'
-        });
-      }
+      handleApiError(error, 'Failed to authenticate user');
       return false;
     } finally {
       setIsLoading(false);
@@ -139,36 +118,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearError();
     
     try {
-      const response = await fetch(`${API_URL}/users/auth`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ name })
-      });
-      
-      if (!response.ok) {
-        throw response;
-      }
-      
-      const data = await response.json();
-      const { token, user } = data;
+      const response = await userApi.login(name);
+      const { token, user } = response.data;
       
       localStorage.setItem('auth_token', token);
       setUser(user);
       isValidated.current = true;
     } catch (error) {
       console.error('Login error:', error);
-      
-      if (error instanceof Response) {
-        await handleApiError(error, 'Failed to login');
-      } else {
-        setError({
-          message: 'Network error. Please check your connection.',
-          code: 'network_error'
-        });
-      }
-      
+      handleApiError(error, 'Failed to login');
       throw error;
     } finally {
       setIsLoading(false);

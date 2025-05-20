@@ -7,6 +7,9 @@ import HomePage from './pages/HomePage';
 import GamePage from './pages/game';
 import LobbyPage from './pages/LobbyPage';
 import RulesPage from './pages/RulesPage';
+import TermsPage from './pages/TermsPage';
+import PrivacyPage from './pages/PrivacyPage';
+import ContactPage from './pages/ContactPage';
 
 // Protected route component
 interface ProtectedRouteProps {
@@ -51,6 +54,9 @@ function App() {
           </ProtectedRoute>
         } />
         <Route path="/rules" element={<RulesPage />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/contact" element={<ContactPage />} />
       </Routes>
     </div>
   );

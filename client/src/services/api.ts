@@ -8,6 +8,24 @@ const api = axios.create({
   },
 });
 
+// Add request interceptor to include auth token in requests
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// User API
+export const userApi = {
+  getCurrentUser: () => api.get('/users/me'),
+  login: (name: string) => api.post('/users/auth', { name }),
+};
+
 // Game API
 export const gameApi = {
   getAllGames: () => api.get('/games'),
