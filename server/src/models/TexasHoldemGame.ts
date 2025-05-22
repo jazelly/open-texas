@@ -92,7 +92,7 @@ export class TexasHoldemGame {
     this.currentRound = null;
     this.hostId = hostId;
 
-    const seatCoordinates = [];
+    const seatCoordinates: { top: number, left: number }[] = [];
     for (let i = 0; i < maxPlayers; i++) {
       seatCoordinates.push(calculateSeatPosition(i, maxPlayers));
     }
@@ -353,7 +353,7 @@ export class TexasHoldemGame {
     startingSeatIndex: number
   ): number[] {
     const endSeatIndex = startingSeatIndex + this.getPlayerCount() - 1;
-    const playerIndexChain = [];
+    const playerIndexChain: number[] = [];
     for (let i = startingSeatIndex; i <= endSeatIndex; i++) {
       playerIndexChain.push(i % this.getPlayerCount());
     }

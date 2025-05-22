@@ -1,74 +1,135 @@
 import { Request, Response } from 'express';
 import { userService } from '../services/UserService.js';
 import { generateAuthToken, JWT_SECRET } from '../utils/jwt.js';
+import {
+  AppError,
+  UserNameTaken,
+  InvalidCredentials,
+  ValidationError,
+  NotFoundError,
+  UnauthorizedError,
+  UserEmailAlreadyRegistered
+} from '../services/errors.js';
+
+/**
+ * Handle specific error types and send appropriate response
+ */
+export const handleError = (error: any, req: Request, res: Response, next: Function): void => {
+  console.error('Error in controller:', error);
+  
+  if (error instanceof AppError) {
+    res.status(error.statusCode).json({
+      error: error.message,
+      code: error.name,
+    });
+  } else {
+    res.status(500).json({
+      error: 'An unexpected error occurred',
+      code: 'SERVER_ERROR',
+    });
+  }
+};
 
 /**
  * Get all users
  */
-export const getAllUsers = async (req: Request, res: Response): Promise<void> => {
+export const getAllUsers = async (req: Request, res: Response, next: Function): Promise<void> => {
   try {
     const users = await userService.getAllUsers();
     res.json(users);
   } catch (error) {
-    console.error('Error fetching users:', error);
-    res.status(500).json({ error: 'Failed to fetch users' });
+    next(error);
   }
 };
 
 /**
  * Get a user by ID
  */
-export const getUserById = async (req: Request, res: Response): Promise<void> => {
+export const getUserById = async (req: Request, res: Response, next: Function): Promise<void> => {
   try {
     const { id } = req.params;
     const user = await userService.getUserById(id);
     
     if (!user) {
-      res.status(404).json({ error: 'User not found' });
-      return;
+      throw new NotFoundError('User');
     }
     
     res.json(user);
   } catch (error) {
-    console.error('Error fetching user:', error);
-    res.status(500).json({ error: 'Failed to fetch user' });
+    next(error);
   }
 };
 
 /**
- * Create a new user
+ * Sign up a new user with password
  */
-export const createUser = async (req: Request, res: Response): Promise<void> => {
+export const signup = async (req: Request, res: Response, next: Function): Promise<void> => {
   try {
-    const { name } = req.body;
+    const { name, email, password } = req.body;
     
-    if (!name) {
-      res.status(400).json({ error: 'Name is required' });
-      return;
+    if (!name || !password || !email) {
+      throw new ValidationError('Name, email and password are required');
     }
     
-    // Check if user already exists
-    const existingUser = await userService.getUserByName(name);
-    
-    if (existingUser) {
-      res.status(400).json({ error: 'User with this name already exists' });
-      return;
+    // Validate password strength
+    if (password.length < 8) {
+      throw new ValidationError('Password must be at least 8 characters long');
     }
     
-    const user = await userService.findOrCreateUser(name);
+    const user = await userService.createUserWithPassword(name, email, password);
+    const token = generateAuthToken(user.id, user.name, JWT_SECRET);
     
-    res.status(201).json(user);
+    res.status(201).json({
+      token,
+      user,
+    });
   } catch (error) {
-    console.error('Error creating user:', error);
-    res.status(500).json({ error: 'Failed to create user' });
+    next(error);
   }
 };
 
+/**
+ * Sign in a user with password
+ */
+export const signin = async (req: Request, res: Response, next: Function): Promise<void> => {
+  try {
+    const { username, password } = req.body;
+    
+    if (!username || !password) {
+      throw new ValidationError('Username/email and password are required');
+    }
+    
+    // Check if the input is an email (contains @ symbol)
+    const isEmail = username.includes('@');
+    
+    let user;
+    if (isEmail) {
+      // Authenticate with email
+      user = await userService.authenticateWithEmail(username, password);
+    } else {
+      // Authenticate with username
+      user = await userService.authenticateWithPassword(username, password);
+    }
+    
+    if (!user) {
+      throw new InvalidCredentials();
+    }
+    
+    const token = generateAuthToken(user.id, user.name, JWT_SECRET);
+    
+    res.json({
+      token,
+      user,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 /**
  * Delete a user
  */
-export const deleteUser = async (req: Request, res: Response): Promise<void> => {
+export const deleteUser = async (req: Request, res: Response, next: Function): Promise<void> => {
   try {
     const { id } = req.params;
     
@@ -76,56 +137,27 @@ export const deleteUser = async (req: Request, res: Response): Promise<void> => 
     
     res.status(204).send();
   } catch (error) {
-    console.error('Error deleting user:', error);
-    res.status(500).json({ error: 'Failed to delete user' });
-  }
-};
-
-/**
- * Authenticate a user - creates if doesn't exist
- */
-export const authenticateUser = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { name } = req.body;
-    
-    if (!name) {
-      res.status(400).json({ error: 'Name is required' });
-      return;
-    }
-    
-    const user = await userService.findOrCreateUser(name);
-    const token = generateAuthToken(user.id, user.name, JWT_SECRET);
-    
-    res.json({ 
-      token,
-      user, 
-    });
-  } catch (error) {
-    console.error('Error authenticating user:', error);
-    res.status(500).json({ error: 'Failed to authenticate user' });
+    next(error);
   }
 };
 
 /**
  * Get the current authenticated user
  */
-export const getCurrentUser = async (req: Request, res: Response): Promise<void> => {
+export const getCurrentUser = async (req: Request, res: Response, next: Function): Promise<void> => {
   try {
     if (!req.user || !req.user.userId) {
-      res.status(401).json({ error: 'Not authenticated' });
-      return;
+      throw new UnauthorizedError();
     }
     
     const user = await userService.getUserById(req.user.userId);
     
     if (!user) {
-      res.status(400).json({ error: 'User not found' });
-      return;
+      throw new NotFoundError('User');
     }
     
     res.json(user);
   } catch (error) {
-    console.error('Error fetching current user:', error);
-    res.status(500).json({ error: 'Failed to fetch user' });
+    next(error);
   }
-}; 
+};

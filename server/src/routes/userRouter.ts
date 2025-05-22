@@ -6,11 +6,15 @@ const router = express.Router();
 
 // User routes
 router.get('/', userController.getAllUsers);
-router.post('/', userController.createUser);
-// Authentication route
-router.post('/auth', userController.authenticateUser);
+
+router.post('/signup', userController.signup);
+router.post('/signin', userController.signin);
+
 // Protected route for current user
 router.get('/me', authenticateToken, userController.getCurrentUser);
 router.delete('/:id', userController.deleteUser);
+
+// Error handling middleware must be placed after all routes
+router.use(userController.handleError);
 
 export const userRouter = router; 

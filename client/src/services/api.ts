@@ -23,7 +23,11 @@ api.interceptors.request.use(
 // User API
 export const userApi = {
   getCurrentUser: () => api.get('/users/me'),
-  login: (name: string) => api.post('/users/auth', { name }),
+  // Username parameter can be either username or email
+  login: (username: string, password: string) => 
+    api.post('/users/signin', { username, password }),
+  signup: (name: string, email: string | null, password: string) => 
+    api.post('/users/signup', { name, email, password }),
 };
 
 // Game API

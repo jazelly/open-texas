@@ -1,6 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { ReactNode } from 'react';
-import { useAuth } from './hooks/useAuth';
 
 // Pages
 import HomePage from './pages/HomePage';
@@ -10,6 +9,8 @@ import RulesPage from './pages/RulesPage';
 import TermsPage from './pages/TermsPage';
 import PrivacyPage from './pages/PrivacyPage';
 import ContactPage from './pages/ContactPage';
+import { AuthProvider, useAuthContext } from './context';
+
 
 // Protected route component
 interface ProtectedRouteProps {
@@ -18,7 +19,7 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({ children, allowPublicAccess = false }: ProtectedRouteProps) => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading } = useAuthContext();
   
   // Don't render anything while checking authentication
   if (isLoading) {
@@ -40,25 +41,27 @@ const ProtectedRoute = ({ children, allowPublicAccess = false }: ProtectedRouteP
 
 function App() {
   return (
-    <div className="flex flex-col min-h-screen bg-gray-900 text-white">
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/lobby" element={
-          <ProtectedRoute>
-            <LobbyPage />
-          </ProtectedRoute>
-        } />
-        <Route path="/game/:gameId" element={
-          <ProtectedRoute allowPublicAccess={true}>
-            <GamePage />
-          </ProtectedRoute>
-        } />
-        <Route path="/rules" element={<RulesPage />} />
-        <Route path="/terms" element={<TermsPage />} />
-        <Route path="/privacy" element={<PrivacyPage />} />
-        <Route path="/contact" element={<ContactPage />} />
-      </Routes>
-    </div>
+    <AuthProvider>
+      <div className="flex flex-col min-h-screen bg-gray-900 text-white">
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/lobby" element={
+            <ProtectedRoute>
+              <LobbyPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/game/:gameId" element={
+            <ProtectedRoute allowPublicAccess={true}>
+              <GamePage />
+            </ProtectedRoute>
+          } />
+          <Route path="/rules" element={<RulesPage />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/contact" element={<ContactPage />} />
+        </Routes>
+      </div>
+    </AuthProvider>
   );
 }
 

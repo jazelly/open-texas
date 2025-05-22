@@ -6,6 +6,7 @@ interface User {
   id: string;
   name: string;
   chips: number;
+  email?: string;
 }
 
 export interface AuthError {
@@ -20,7 +21,8 @@ interface AuthContextType {
   isLoading: boolean;
   isValidated: boolean;
   error: AuthError | null;
-  login: (name: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<void>;
+  signup: (username: string, email: string | null, password: string) => Promise<void>;
   logout: () => void;
   checkAuth: () => Promise<boolean>;
   clearError: () => void;
@@ -104,10 +106,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const login = async (name: string): Promise<void> => {
-    if (!name.trim()) {
+  const login = async (username: string, password: string): Promise<void> => {
+    if (!username.trim() || !password.trim()) {
       setError({
-        message: 'Name is required',
+        message: 'Username/email and password are required',
         code: 'validation_error'
       });
       return;
@@ -118,7 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearError();
     
     try {
-      const response = await userApi.login(name);
+      const response = await userApi.login(username, password);
       const { token, user } = response.data;
       
       localStorage.setItem('auth_token', token);
@@ -126,7 +128,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isValidated.current = true;
     } catch (error) {
       console.error('Login error:', error);
-      handleApiError(error, 'Failed to login');
+      handleApiError(error, 'Invalid username or password');
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const signup = async (username: string, email: string | null, password: string): Promise<void> => {
+    if (!username.trim() || !password.trim()) {
+      setError({
+        message: 'Username and password are required',
+        code: 'validation_error'
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    isValidated.current = false;
+    clearError();
+    
+    try {
+      const response = await userApi.signup(username, email, password);
+      const { token, user } = response.data;
+      
+      localStorage.setItem('auth_token', token);
+      setUser(user);
+      isValidated.current = true;
+    } catch (error) {
+      console.error('Signup error:', error);
+      handleApiError(error, 'Failed to create account');
       throw error;
     } finally {
       setIsLoading(false);
@@ -148,7 +179,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         isValidated: isValidated.current,
         error,
-        login, 
+        login,
+        signup, 
         logout,
         checkAuth,
         clearError
