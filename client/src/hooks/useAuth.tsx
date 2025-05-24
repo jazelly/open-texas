@@ -107,7 +107,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const login = async (username: string, password: string): Promise<void> => {
+    const requestId = Math.random().toString(36).substring(7);
+    const loginAttempt = {
+      requestId,
+      username,
+      hasPassword: !!password,
+      passwordLength: password?.length || 0,
+      isEmail: username?.includes('@'),
+      timestamp: new Date().toISOString(),
+      userAgent: navigator.userAgent,
+      localStorage: {
+        authToken: !!localStorage.getItem('auth_token'),
+        gameSession: !!localStorage.getItem('gameSession'),
+        totalItems: localStorage.length
+      }
+    };
+    
+    console.log('🔐 Frontend login attempt:', loginAttempt);
+    
     if (!username.trim() || !password.trim()) {
+      console.warn('❌ Validation failed:', { requestId, username: !!username.trim(), password: !!password.trim() });
       setError({
         message: 'Username/email and password are required',
         code: 'validation_error'
@@ -120,14 +139,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearError();
     
     try {
+      console.log('📡 Making API call:', { requestId, endpoint: '/api/users/signin' });
       const response = await userApi.login(username, password);
       const { token, user } = response.data;
+      
+      console.log('✅ Login successful:', { 
+        requestId, 
+        userId: user?.id, 
+        username: user?.name,
+        hasToken: !!token,
+        tokenLength: token?.length || 0
+      });
       
       localStorage.setItem('auth_token', token);
       setUser(user);
       isValidated.current = true;
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('❌ Login error:', { 
+        requestId, 
+        error: axios.isAxiosError(error) ? {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          message: error.message
+        } : error,
+        username,
+        attemptNumber: loginAttempt.localStorage.totalItems
+      });
       handleApiError(error, 'Invalid username or password');
       throw error;
     } finally {
@@ -165,10 +203,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
+    const logoutInfo = {
+      requestId: Math.random().toString(36).substring(7),
+      timestamp: new Date().toISOString(),
+      beforeLogout: {
+        authToken: !!localStorage.getItem('auth_token'),
+        gameSession: !!localStorage.getItem('gameSession'),
+        totalItems: localStorage.length,
+        user: user ? { id: user.id, name: user.name } : null
+      }
+    };
+    
+    console.log('🚪 Logout initiated:', logoutInfo);
+    
     localStorage.removeItem('auth_token');
     setUser(null);
     isValidated.current = false;
     clearError();
+    
+    console.log('🚪 Logout completed:', {
+      requestId: logoutInfo.requestId,
+      afterLogout: {
+        authToken: !!localStorage.getItem('auth_token'),
+        gameSession: !!localStorage.getItem('gameSession'),
+        totalItems: localStorage.length
+      }
+    });
   };
 
   return (

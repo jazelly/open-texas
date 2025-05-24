@@ -7,6 +7,10 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { gameSocket } from './socket.js';
 import { apiRoutes } from './routes/index.js';
+import { xssProtection } from './middleware/securityMiddleware.js';
+import { adaptiveSecurityMiddleware } from './middleware/securityMiddleware.js';
+import { generateRequestId } from './middleware/requestIdMiddleware.js';
+import logger from './utils/logger.js';
 
 // Load environment variables
 dotenv.config();
@@ -27,7 +31,12 @@ const io = new Server(server, {
   }
 });
 
-// Middleware
+app.use(adaptiveSecurityMiddleware);
+app.use(xssProtection);
+
+// Generate requestId for all requests
+app.use(generateRequestId);
+
 app.use(cors({
   origin: process.env.CLIENT_URL,
   credentials: true
@@ -35,20 +44,56 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Request logging middleware
+app.use((req, res, next) => {
+  const start = Date.now();
+  
+  logger.info({
+    requestId: req.requestId,
+    method: req.method,
+    url: req.url,
+    userAgent: req.headers['user-agent'],
+    ip: req.ip || req.connection.remoteAddress,
+  }, 'Incoming request');
+
+  // Log response when finished
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    logger.info({
+      requestId: req.requestId,
+      method: req.method,
+      url: req.url,
+      statusCode: res.statusCode,
+      duration: `${duration}ms`,
+    }, 'Request completed');
+  });
+
+  next();
+});
+
 app.use('/api', apiRoutes);
 
 gameSocket(io);
 
 const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Socket.io is accepting connections from: ${process.env.NODE_ENV === 'production' ? 'same-origin only' : process.env.CLIENT_URL}`);
+  logger.info({ port: PORT, env: process.env.NODE_ENV }, 'Server started');
 });
 
 process.on('SIGINT', () => {
-  console.log('Shutting down server...');
+  logger.info('Received SIGINT, shutting down server...');
   server.close(() => {
-    console.log('Server shut down.');
+    logger.info('Server shut down gracefully');
     process.exit(0);
   });
+});
+
+process.on('uncaughtException', (error) => {
+  logger.fatal({ error: error.message, stack: error.stack }, 'Uncaught exception');
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  logger.fatal({ reason, promise }, 'Unhandled promise rejection');
+  process.exit(1);
 }); 

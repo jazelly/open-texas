@@ -5,18 +5,6 @@ import { gameService } from './services/GameService.js';
 import { userGameSessionService } from './services/UserGameSessionService.js';
 import { Action } from './models/Round.js';
 
-// Clean up expired sessions periodically (30 min expiration)
-const SESSION_EXPIRY = 30 * 60 * 1000; // 30 minutes in milliseconds
-setInterval(async () => {
-  const now = Date.now();
-  const sessions = await userGameSessionService.getSessions();
-  for (const session of sessions) {
-    if (now - SESSION_EXPIRY > session.updatedAt.getTime()) {
-      userGameSessionService.deleteSession(session.token);
-    }
-  }
-}, 60000); // Check every minute
-
 interface JoinGameInfo {
   gameId: string;
   playerName: string;

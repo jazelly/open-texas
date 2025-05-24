@@ -2,6 +2,7 @@ import prisma from "./prisma.js";
 import { generateSalt, hashPassword, verifyPassword } from "../utils/password.js";
 import { UserEmailAlreadyRegistered, UserNameTaken } from "./errors.js";
 import { User } from "@prisma/client";
+import logger from "../utils/logger.js";
 
 export class UserService {
   /**
@@ -17,7 +18,7 @@ export class UserService {
         const user = await tx.user.create({
           data: { 
             name,
-            email,
+            email: email.toLowerCase(),
           }
         });
         
@@ -50,27 +51,52 @@ export class UserService {
   /**
    * Authenticate a user with password
    */
-  async authenticateWithPassword(username: string, password: string): Promise<any | null> {
-    const user = await prisma.user.findUnique({
-      where: { name: username },
-      include: {
-        credential: true
+  async authenticateWithPassword(username: string, password: string, requestId: string) {
+    logger.info({ requestId, username }, 'Starting username authentication');
+    
+    try {
+      const user = await prisma.user.findUnique({
+        where: { name: username },
+        include: {
+          credential: true
+        }
+      });
+      
+      if (!user) {
+        logger.warn({ requestId, username }, 'User not found for username authentication');
+        return null;
       }
-    });
-    
-    if (!user || !user.credential) {
-      return null;
+      
+      if (!user.credential) {
+        logger.warn({ requestId, username, userId: user.id }, 'User found but no credential record');
+        return null;
+      }
+      
+      logger.info({ requestId, username, userId: user.id }, 'User and credential found, verifying password');
+      
+      const { passwordHash, salt } = user.credential;
+      
+      const isPasswordValid = verifyPassword(password, salt, passwordHash);
+      
+      if (!isPasswordValid) {
+        logger.warn({ requestId, username, userId: user.id }, 'Password verification failed');
+        return null;
+      }
+      
+      logger.info({ requestId, username, userId: user.id }, 'Password verification successful');
+      
+      // Don't return the credential in the response
+      const { credential, ...userWithoutCredential } = user;
+      return userWithoutCredential;
+    } catch (error) {
+      logger.error({ 
+        requestId, 
+        username, 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      }, 'Error during username authentication');
+      throw error;
     }
-    
-    const { passwordHash, salt } = user.credential;
-    
-    if (!verifyPassword(password, salt, passwordHash)) {
-      return null;
-    }
-    
-    // Don't return the credential in the response
-    const { credential, ...userWithoutCredential } = user;
-    return userWithoutCredential;
   }
 
   /**
@@ -110,27 +136,54 @@ export class UserService {
   /**
    * Authenticate a user with email
    */
-  async authenticateWithEmail(email: string, password: string): Promise<any | null> {
-    const user = await prisma.user.findUnique({
-      where: { email },
-      include: {
-        credential: true
+  async authenticateWithEmail(email: string, password: string, requestId: string) {
+    const normalizedEmail = email.toLowerCase();
+    
+    logger.info({ requestId, email: normalizedEmail }, 'Starting email authentication');
+    
+    try {
+      const user = await prisma.user.findUnique({
+        where: { email: normalizedEmail },
+        include: {
+          credential: true
+        }
+      });
+      
+      if (!user) {
+        logger.warn({ requestId, email: normalizedEmail }, 'User not found for email authentication');
+        return null;
       }
-    });
-    
-    if (!user || !user.credential) {
-      return null;
+      
+      if (!user.credential) {
+        logger.warn({ requestId, email: normalizedEmail, userId: user.id }, 'User found but no credential record');
+        return null;
+      }
+      
+      logger.info({ requestId, email: normalizedEmail, userId: user.id, username: user.name }, 'User and credential found, verifying password');
+      
+      const { passwordHash, salt } = user.credential;
+      
+      const isPasswordValid = verifyPassword(password, salt, passwordHash);
+      
+      if (!isPasswordValid) {
+        logger.warn({ requestId, email: normalizedEmail, userId: user.id, username: user.name }, 'Password verification failed');
+        return null;
+      }
+      
+      logger.info({ requestId, email: normalizedEmail, userId: user.id, username: user.name }, 'Password verification successful');
+      
+      // Don't return the credential in the response
+      const { credential, ...userWithoutCredential } = user;
+      return userWithoutCredential;
+    } catch (error) {
+      logger.error({ 
+        requestId, 
+        email: normalizedEmail, 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      }, 'Error during email authentication');
+      throw error;
     }
-    
-    const { passwordHash, salt } = user.credential;
-    
-    if (!verifyPassword(password, salt, passwordHash)) {
-      return null;
-    }
-    
-    // Don't return the credential in the response
-    const { credential, ...userWithoutCredential } = user;
-    return userWithoutCredential;
   }
 
   /**

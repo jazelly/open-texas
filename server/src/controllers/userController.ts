@@ -10,12 +10,13 @@ import {
   UnauthorizedError,
   UserEmailAlreadyRegistered
 } from '../services/errors.js';
+import logger from '../utils/logger.js';
 
 /**
  * Handle specific error types and send appropriate response
  */
 export const handleError = (error: any, req: Request, res: Response, next: Function): void => {
-  console.error('Error in controller:', error);
+  logger.error({ error: error.message, stack: error.stack, url: req.url, method: req.method }, 'Error in controller');
   
   if (error instanceof AppError) {
     res.status(error.statusCode).json({
@@ -92,10 +93,24 @@ export const signup = async (req: Request, res: Response, next: Function): Promi
  * Sign in a user with password
  */
 export const signin = async (req: Request, res: Response, next: Function): Promise<void> => {
+  const requestId = req.requestId!; // RequestId is guaranteed to exist due to middleware
+  
   try {
     const { username, password } = req.body;
     
+    // Add detailed logging for debugging
+    logger.info({
+      requestId,
+      username,
+      hasPassword: !!password,
+      passwordLength: password?.length || 0,
+      isEmail: username?.includes('@'),
+      userAgent: req.headers['user-agent'],
+      ip: req.ip,
+    }, 'Sign in attempt');
+    
     if (!username || !password) {
+      logger.warn({ requestId, username, hasPassword: !!password }, 'Missing credentials in signin request');
       throw new ValidationError('Username/email and password are required');
     }
     
@@ -104,16 +119,30 @@ export const signin = async (req: Request, res: Response, next: Function): Promi
     
     let user;
     if (isEmail) {
-      // Authenticate with email
-      user = await userService.authenticateWithEmail(username, password);
+      logger.info({ requestId, email: username.toLowerCase() }, 'Attempting email authentication');
+      user = await userService.authenticateWithEmail(username, password, requestId);
     } else {
-      // Authenticate with username
-      user = await userService.authenticateWithPassword(username, password);
+      logger.info({ requestId, username }, 'Attempting username authentication');
+      user = await userService.authenticateWithPassword(username, password, requestId);
     }
     
     if (!user) {
+      logger.warn({ 
+        requestId, 
+        username, 
+        isEmail,
+        ip: req.ip || req.connection.remoteAddress,
+        userAgent: req.headers['user-agent']
+      }, 'Authentication failed - invalid credentials');
       throw new InvalidCredentials();
     }
+    
+    logger.info({ 
+      requestId, 
+      userId: user.id, 
+      username: user.name,
+      loginMethod: isEmail ? 'email' : 'username'
+    }, 'Authentication successful');
     
     const token = generateAuthToken(user.id, user.name, JWT_SECRET);
     
@@ -122,6 +151,14 @@ export const signin = async (req: Request, res: Response, next: Function): Promi
       user,
     });
   } catch (error) {
+    logger.error({ 
+      requestId, 
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      url: req.url,
+      method: req.method,
+      body: { ...req.body, password: req.body?.password ? '[REDACTED]' : undefined }
+    }, 'Sign in error');
     next(error);
   }
 };

@@ -1,18 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken, JWT_SECRET } from '../utils/jwt.js';
 
-// Extend Express Request to include user
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        userId: string;
-        username: string;
-      };
-    }
-  }
-}
-
 /**
  * Middleware to verify JWT token and attach user to request
  */
